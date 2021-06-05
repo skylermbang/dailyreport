@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+
+    <!-- fontawesome -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.15.3/css/all.css"
+        integrity="sha384-SZXxX4whJ79/gErwcOYf+zWLeJdY/qpuqC4cAa9rOGUstPomtqpuNWT9wdPEn2fk" crossorigin="anonymous" />
+
+    <!-- Bootstrap CSS/js -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous" />
+
+    <!-- Optional JavaScript -->
+    <!-- 순서를 지키지 않으면 에러가 납니다. -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"
+        integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q"
+        crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"
+        integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl"
+        crossorigin="anonymous"></script>
+
+    <!-- chart js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.2/Chart.js"></script>
+
+    <!-- 달력용 -->
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <!-- 달력용 -->
+
+    <!-- JS 시작 -->
+    <script>
+        //로그인 확인 여부
+        let login_checker = false;
+        let user_id = '';
+
+        // 오늘 날짜 변수
+        let today = "";
+
+        //타임테이블 보는지, 데일리 보는지
+        let nowYouSee = 'timetable';
+
+        // 사이트 로딩끝나면 즉시 작동되는 함수들
+        $("document").ready(function () {
+            login_checker = getCookie('login_checker');
+            user_id = getCookie('user_id');
+            loadTimeTable();
+            setTodayAfterLoad();
+            if (login_checker === "true") {
+                login_success(user_id);
+            }
+        });
+
+        // timetable 만드는 function
+        function loadTimeTable() {
+            const options = `
+          <option>  </option>
+          <option>수면</option>
+          <option>휴식</option>
+          <option>정비</option>
+          <option>식사</option>
+          <option>간식</option>
+          <option>업무</option>
+          <option>강의</option>
+          <option>운전</option>
+          <option>독서</option>
+          <option>공부</option>
+          <option>운동</option>
+          <option>여가</option>
+          <option>폰질</option>
+          <option>기타</option>`;
+            for (let i = 0; i < 24; i++) {
+                let newRow = `
+                <tr class='time_${i}'>
+                    <td class='time_name'>${i}:00</td>
+                    <td>
+                    <select class='time_do_1 mg-auto'> ${options} </select>
+                    </td>
+                    <td><input class="time_long_1" type="number" min="0" max="60" step="5"/></td>
+                    <td><input class='time_desc_1' type="text" /></td>
+                    <td>
+                    <select class='time_do_2 mg-auto'> ${options} </select>
+                    </td>
+                    <td><input class="time_long_2" type="number" min="0" max="60" step="5"/></td>
+                    <td><input class='time_desc_2' type="text" /></td>
+                    <td>
+                    <select class='time_do_3 mg-auto'> ${options} </select>
+                    </td>
+                    <td><input class="time_long_3" type="number" min="0" max="60" step="5"/></td>
+                    <td><input class='time_desc_3' type="text" /></td>
+                    <td>
+                    <select class='time_score'>
+                        <option>  </option>
+                        <option>0.5</option>
+                        <option>1.0</option>
+                        <option>1.5</option>
+                        <option>2.0</option>
+                        <option>2.5</option>
+                        <option>3.0</option>
+                        <option>3.5</option>
+                        <option>4.0</option>
+                        <option>4.5</option>
+                        <option>5.0</option>
+                    </select>
+                    </td>
+                    <td><input class="time_comment" type="text" /></td>
+                </tr>`;
+                $(".daily-report-table").append(newRow);
+            }
+        }
+
+
+        // timetable/daily report 보이는 것을 변환
+        function changeToReportTable() {
+            $(".daily-report-table-container").css({ display: "none" });
+            $(".chart-grid-content").css({ display: "grid" });
+            nowYouSee = 'reporttable';
+        }
+
+        // timetable/daily report 보이는 것을 변환
+        function changeToTimeTable() {
+            $(".chart-grid-content").css({ display: "none" });
+            $(".daily-report-table-container").css({ display: "block" });
+            nowYouSee = 'timetable';
+        }
+
+        // datepicker 버튼 설정
+        $(function () {
+            $("#datepicker").datepicker({
+                showOn: "both",
+                buttonText: '<i class="far fa-calendar-alt fa-2x"></i>',
+                dateFormat: "yy-mm-dd",
+                todayBtn: "linked",
+            });
+        });
+
+        function setTodayAfterLoad() {
+            let today_year = new Date().getFullYear();
+            let today_month = new Date().getMonth();
+            let today_date = new Date().getDate();
+            today = `${today_year}-${today_month < 10 ? "0" + (today_month + 1) : today_month
+                }-${today_date < 10 ? "0" + today_date : today_date}`;
+            $("#datepicker").val(today);
+        }
+
+        // 시계 기능
+        function getTime() {
+            var d = new Date();
+            var n = d.toLocaleString([], { hour: "2-digit", minute: "2-digit" });
+            document.getElementById("time").innerHTML = n;
+        }
+
+        window.addEventListener("load", setInterval(getTime, 1000));
+
+        // 날짜 타이틀 바뀌는 함수
+        function changeCurrentDate() {
+            let changeToThisDay = $("#datepicker").val();
+            if (changeToThisDay == today) {
+                changeToThisDay = "Today";
+            }
+            $("#current-date").text(changeToThisDay);
+        }
+
+        function toToday() {
+            $("#datepicker").datepicker('setDate', today);
+        }
+    </script>
+    <!-- JS 끝 -->
+
+    <style>
+        /* general */
+        canvas {
+            height: 100% !important;
+            width: 100% !important;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        .main-container {
+            width: 100%;
+            height: 100%;
+        }
+
+        .txt-cntr {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* buttons */
+        button {
+            cursor: pointer;
+        }
+
+        button:focus {
+            outline: none;
+        }
+
+        .button-square {
+            width: 55px;
+            height: 55px;
+            border: none;
+            border-radius: 10px;
+        }
+
+        .button-circle {
+            width: 55px;
+            height: 55px;
+            border: none;
+            border-radius: 50px;
+        }
+
+        .button-rectangle {
+            width: 170px;
+            height: 55px;
+            border: none;
+            border-radius: 10px;
+        }
+
+        /* main grid */
+        .grid-item-1 {
+            grid-area: item1;
+            padding: 25px 25px 25px 25px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .grid-item-2 {
+            grid-area: item2;
+            padding: 25px 25px 25px 25px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .grid-item-3 {
+            grid-area: item3;
+            display: flex;
+            padding: 50px 25px 50px 25px;
+            /* flex-direction: column; */
+            justify-content: space-between;
+        }
+
+        .grid-item-4 {
+            grid-area: item4;
+            display: flex;
+            padding: 100px 25px 100px 25px;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .grid-item-5 {
+            grid-area: item5;
+        }
+
+        .grid-item-6 {
+            grid-area: item6;
+        }
+
+        .grid-content {
+            display: grid;
+            width: 100%;
+            grid-template-columns: 1fr 5fr;
+            grid-template-rows: 100px 160px 413px 1fr;
+            grid-template-areas:
+                "item1 item2"
+                "item3 item5"
+                "item4 item5"
+                "item6 item5";
+            padding: 3vw;
+        }
+
+        /* chart grid */
+        .chart-grid-item-1 {
+            grid-area: chart-item1;
+        }
+
+        .chart-grid-item-2 {
+            grid-area: chart-item2;
+        }
+
+        .chart-grid-item-3 {
+            grid-area: chart-item3;
+        }
+
+        .chart-grid-item-4 {
+            grid-area: chart-item4;
+        }
+
+        .chart-grid-item-5 {
+            grid-area: chart-item5;
+        }
+
+        .chart-grid-item-6 {
+            grid-area: chart-item6;
+        }
+
+        .chart-grid-item-7 {
+            grid-area: chart-item7;
+        }
+
+        .chart-grid-content {
+            display: none;
+            width: 100%;
+            grid-template-columns: 3fr 4fr;
+            grid-template-rows: 5vh 40vh 5vh 20vh;
+            grid-template-areas:
+                "chart-item1 chart-item2"
+                "chart-item3 chart-item4"
+                "chart-item5 chart-item6"
+                "chart-item5 chart-item7";
+        }
+
+        .chart-grid-content div {
+            border: 1px solid;
+        }
+
+        /* result report table */
+        .result-report-content {
+            height: 370px;
+        }
+
+        .result-report-content td {
+            font-size: 13px;
+        }
+
+        /* time table */
+        select {
+            width: 100%;
+        }
+
+        table {
+            table-layout: fixed;
+            width: 100%;
+        }
+
+        table input {
+            width: 100%;
+        }
+
+        table select {
+            width: 100%;
+        }
+
+        .daily-report-table {
+            border: 1px solid #444444;
+        }
+
+        .daily-report-table-container {
+            overflow: auto;
+        }
+
+        th,
+        td {
+            text-align: center;
+        }
+
+        /* datepicker */
+
+        .ui-datepicker-trigger {
+            border: none;
+            /* background:none; */
+            width: 55px;
+            height: 55px;
+            border: none;
+            border-radius: 10px;
+        }
+
+        .ui-datepicker {
+            width: 300px;
+            height: 200px;
+            margin: 5px auto 0;
+            font: 12pt Arial, sans-serif;
+            background-color: white;
+        }
+
+        /* clock */
+        #time {
+            font-size: 28px;
+        }
+
+        /* Account */
+        #dropdown-menu-test {
+            width: 300px;
+            height: 310px;
+        }
+
+        #signup-area-test {
+            display: none;
+            width: 300px;
+            height: 310px;
+        }
+
+        .dropdown-menu {
+            top: auto;
+        }
+
+        .signup-title {
+            padding-top: 16px;
+            padding-left: 22px;
+        }
+
+        .login-success-area {
+            width: 300px;
+            height: 150px;
+            text-align: center;
+            padding-top: 60px;
+        }
+
+        #login-success-area-container {
+            height: 100%;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin: 0px 50px 0px 50px;
+        }
+
+        /* overall styler */
+        :root {
+            --text-color: #407076;
+            --border-color: #407076;
+            --background-color: none;
+            --input-background-color: none;
+            --table-background-color: none;
+            --button-background-color: #ededed;
+        }
+
+        h1,
+        i,
+        button,
+        td,
+        option,
+        div {
+            color: var(--text-color);
+        }
+
+        th,
+        td {
+            border: 1px solid var(--border-color);
+        }
+
+        h1,
+        i,
+        button,
+        td,
+        tr,
+        table,
+        input,
+        select,
+        div {
+            border-color: var(--border-color);
+        }
+
+        body {
+            background-color: var(--background-color);
+        }
+
+        button {
+            background-color: var(--button-background-color);
+        }
+
+        input,
+        select {
+            background-color: var(--input-background-color);
+        }
+
+        table,
+        .grid-item-5 {
+            background-color: var(--table-background-color);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-container">
+        <div class="grid-content">
+            <!-- 로고 -->
+            <div class="grid-item-1 txt-cntr">
+                <h1 class="">LOGO</h1>
+            </div>
+            <!-- <- today -> -->
+            <div class="grid-item-2">
+                <button onclick="left_button_click()" class="button-circle txt-cntr">
+                    <i class="fas fa-chevron-left fa-lg"></i>
+                </button>
+                <h1 id="current-date" class="txt-cntr" style="margin-bottom: 20px">
+                    Today
+                </h1>
+                <button onclick="right_button_click()" class="button-circle txt-cntr">
+                    <i class="fas fa-chevron-right fa-lg"></i>
+                </button>
+            </div>
+
+            <!-- account/calender/today -->
+            <div class="grid-item-3">
+                <div class="dropdown">
+                    <button class="dropdown-toggle button-square txt-cntr" data-toggle="dropdown" aria-haspopup="true"
+                        aria-expanded="false" onclick="show_dropdown()">
+                        <i class="fas fa-user-circle fa-2x"></i>
+                    </button>
+                    <div id="dropdown-menu-test" class="dropdown-menu">
+                        <div id="dropdown-menu-container-test">
+                            <form class="px-4 py-3">
+                                <div class="form-group">
+                                    <label>아이디</label>
+                                    <input type="text" class="form-control" id="login-id" placeholder="ID" />
+                                </div>
+                                <div class="form-group">
+                                    <label>비밀번호</label>
+                                    <input type="password" class="form-control" id="login-password"
+                                        placeholder="Password" />
+                                </div>
+                                <button type="button" onclick="login()" class="btn btn-primary">
+                                    로그인!
+                                </button>
+                            </form>
+                            <div class="dropdown-divider"></div>
+                            <a onclick="showSignUpArea()" class="dropdown-item" href="#">회원가입</a>
+                        </div>
+                        <div id="login-success-area-container" style="display: none;">
+                            <div id="login-success-area" class="login-success-area dropdown-menu">
+                                <div class="login-success-title"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="signup-area-test" class="signup-area dropdown-menu">
+                        <div class="signup-title">
+                            <h4>회원가입</h4>
+                        </div>
+                        <form class="px-4 py-3">
+                            <div class="form-group">
+                                <label>아이디</label>
+                                <input type="text" class="form-control" id="signup-id" placeholder="ID" />
+                            </div>
+                            <div class="form-group">
+                                <label>비밀번호</label>
+                                <input type="password" class="form-control" id="signup-password"
+                                    placeholder="Password" />
+                            </div>
+                            <button onclick="submitSignupForm()" type="submit" class="btn btn-primary">
+                                회원가입!
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+                <input onchange="calender_date_click()" class="calender" type="hidden" id="datepicker" />
+                <button onclick="today_button_click()" class="button-square txt-cntr">
+                    Today
+                </button>
+            </div>
+
+
+
+            <div class="grid-item-4">
+                <button class="button-rectangle txt-cntr" id="save-button" onclick="save_timetable()">
+                    저장
+                </button>
+                <button class="button-rectangle txt-cntr" id="time-table" onclick="time_table_button_click()">
+                    time table
+                </button>
+                <button class="button-rectangle txt-cntr" id="daily-report" onclick="daily_report_button_click()">
+                    daily report
+                </button>
+            </div>
+
+            <div class="grid-item-6">
+                <h1 class="txt-cntr" id="time"></h1>
+            </div>
+
+            <div class="grid-item-5 chart-grid-content">
+                <div class="chart-grid-item-1 txt-cntr">결과 보고</div>
+                <div class="chart-grid-item-2 txt-cntr">시간에 대한 몰입도의 값</div>
+                <div class="chart-grid-item-3">
+                    <table class="result-report-content">
+                        <tr>
+                            <td colspan="1">항목</td>
+                            <td colspan="1">할애시간</td>
+                            <td colspan="1">항목</td>
+                            <td colspan="1">할애시간</td>
+                        </tr>
+                        <tr>
+                            <td class="small-0" colspan="1">수면</td>
+                            <td class="smalltime-0" colspan="1">0</td>
+                            <td class="big-0" colspan="1" rowspan="5">휴식</td>
+                            <td class="bigtime-0" colspan="1" rowspan="5">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-1" colspan="1">휴식</td>
+                            <td class="smalltime-1" colspan="1">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-2" colspan="1">정비</td>
+                            <td class="smalltime-2" colspan="1">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-3" colspan="1">식사</td>
+                            <td class="smalltime-3" colspan="1">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-4" colspan="1">간식</td>
+                            <td class="smalltime-4" colspan="1">0</td>
+                        </tr>
+                        <!--  -->
+                        <tr>
+                            <td class="small-5" colspan="1">업무</td>
+                            <td class="smalltime-5" colspan="1">0</td>
+                            <td class="big-1" colspan="1" rowspan="3">업무</td>
+                            <td class="bigtime-1" colspan="1" rowspan="3">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-6" colspan="1">강의</td>
+                            <td class="smalltime-6" colspan="1">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-7" colspan="1">운전</td>
+                            <td class="smalltime-7" colspan="1">0</td>
+                        </tr>
+                        <!--  -->
+                        <tr>
+                            <td class="small-8" colspan="1">독서</td>
+                            <td class="smalltime-8" colspan="1">0</td>
+                            <td class="big-2" colspan="1" rowspan="3">자기계발</td>
+                            <td class="bigtime-2" colspan="1" rowspan="3">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-9" colspan="1">공부</td>
+                            <td class="smalltime-9" colspan="1">0</td>
+                        </tr>
+                        <tr>
+                            <td class="small-10" colspan="1">운동</td>
+                            <td class="smalltime-10" colspan="1">0</td>
+                        </tr>
+                        <!— —>
+                            <tr>
+                                <td class="small-11" colspan="1">여가</td>
+                                <td class="smalltime-11" colspan="1">0</td>
+                                <td class="big-3" colspan="1" rowspan="3">기타</td>
+                                <td class="bigtime-3" colspan="1" rowspan="3">0</td>
+                            </tr>
+                            <tr>
+                                <td class="small-12" colspan="1">폰질</td>
+                                <td class="smalltime-12" colspan="1">0</td>
+                            </tr>
+                            <tr>
+                                <td class="small-13" colspan="1">기타</td>
+                                <td class="smalltime-13" colspan="1">0</td>
+                            </tr>
+                    </table>
+                </div>
+                <div class="chart-grid-item-4">
+                    <canvas id="lineChart"></canvas>
+                </div>
+                <div class="chart-grid-item-5">
+                    <canvas id="pieChart"></canvas>
+                </div>
+                <div class="chart-grid-item-6 txt-cntr">오늘 평균 몰입도</div>
+                <div class="chart-grid-item-7 txt-cntr">
+                    <h1 class="score-average"></h1>
+                </div>
+            </div>
+
+            <div class="grid-item-5 daily-report-table-container">
+                <table class="daily-report-table">
+                    <tr>
+                        <td colspan="12">Time Table</td>
+                    </tr>
+                    <tr>
+                        <td>시간</td>
+                        <td colspan="3">계획 1</td>
+                        <td colspan="3">계획 2</td>
+                        <td colspan="3">계획 3</td>
+                        <td>몰입도</td>
+                        <td>비고</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</body>
+<script>
+    // chart.js
+    const backgroundColors = [
+        "rgba(255, 99, 132, 0.2)",
+        "rgba(54, 162, 235, 0.2)",
+        "rgba(255, 206, 86, 0.2)",
+        "rgba(75, 192, 192, 0.2)",
+        "rgba(153, 102, 255, 0.2)",
+        "rgba(255, 159, 64, 0.2)",
+    ];
+    const borderColors = [
+        "rgba(255,99,132,1)",
+        "rgba(54, 162, 235, 1)",
+        "rgba(255, 206, 86, 1)",
+        "rgba(75, 192, 192, 1)",
+        "rgba(153, 102, 255, 1)",
+        "rgba(255, 159, 64, 1)",
+    ];
+    let lineChartLabels = [
+        "Red",
+        "Blue",
+        "Yellow",
+        "Green",
+        "Purple",
+        "Orange",
+    ];
+
+    // account.js
+    function clean_forms() {
+        $("#login-id").val("");
+        $("#login-password").val("");
+        $("#signup-id").val("");
+        $("#signup-password").val("");
+    }
+
+    function show_dropdown() {
+        if ($("#signup-area-test").css("display") == "block") {
+            $("#signup-area-test").hide();
+            clean_forms();
+            return;
+        }
+        if ($("#dropdown-menu-test").css("display") == "none") {
+            $("#dropdown-menu-test").show();
+        } else if ($("#dropdown-menu-test").css("display") == "block") {
+            $("#dropdown-menu-test").hide();
+            clean_forms();
+        }
+    }
+
+    function showSignUpArea() {
+        clean_forms();
+        $("#dropdown-menu-test").hide();
+        $("#signup-area-test").show();
+    }
+
+    function login() {
+        let login_id = $("#login-id").val();
+        let login_password = $("#login-password").val();
+        $.ajax({
+            type: "POST",
+            url: "/login",
+            data: {
+                id: login_id,
+                pw: login_password,
+            },
+            success: function (response) {
+                if (response['res'] === true) {
+                    //  로그인 성공
+                    setCookie('user_id', response['id'], 30)
+                    setCookie('login_checker', true, 30)
+                    login_checker = true;
+                    user_id = response['id'];
+                    login_success(user_id);
+                    alert(response['msg']);
+
+                    //  로그인 실패
+                } else if (response['res'] === false) {
+                    alert(response['msg'])
+                }
+            },
+        });
+    }
+
+    function login_success(id) {
+        $('#dropdown-menu-container-test').hide();
+        $('#signup-area-test').hide();
+        let newData = `<h4>안녕하세요.</h4> <h4>${id}님</h4><button type="button" onclick="logout()" class="logout-button btn btn-primary">
+                                로그아웃!
+                            </button>`;
+        $('#login-success-area-container').append(newData);
+        $('#login-success-area-container').show();
+        get_timetable();
+    }
+
+    function logout() {
+        alert('로그아웃 되었습니다!');
+        deleteCookie('login_checker');
+        deleteCookie('user_id');
+        window.location.reload();
+    }
+
+    function submitSignupForm() {
+        let signup_id = $("#signup-id").val();
+        let signup_password = $("#signup-password").val();
+        $.ajax({
+            type: "POST",
+            url: "/signup",
+            data: {
+                id: signup_id,
+                pw: signup_password,
+            },
+            success: function (response) {
+                // 회원가입 성공
+                if (response['res'] === true) {
+                    alert(response['msg']);
+                    window.location.reload();
+
+                    // 회원가입 실패
+                } else if (response['res'] === false) {
+                    alert(response['msg']);
+                }
+            },
+        });
+    }
+
+
+    //timetable 저장하는 함수
+    function save_timetable() {
+        if (login_checker == null || user_id == null) {
+            alert('로그인을 해주세요!');
+            return;
+        }
+        let id = user_id;
+        let date = $('#datepicker').val();
+        let did = [];
+        for (let i = 0; i < 24; i++) {
+            let i_did = [];
+            for (let z = 1; z <= 3; z++) {
+                i_did[z - 1] = {
+                    'do': $(`.time_${i} .time_do_${z}`).val(),
+                    'long': $(`.time_${i} .time_long_${z}`).val(),
+                    'desc': $(`.time_${i} .time_desc_${z}`).val()
+                };
+                if (!(i_did[z - 1]['do'])) {
+                    break;
+                }
+            }
+            if (!(i_did[0]['do'])) {
+                continue;
+            }
+            let i_score = $(`.time_${i} .time_score`).val();
+            let i_comment = $(`.time_${i} .time_comment`).val();
+            let newData = { time_name: i, time_did: i_did, time_score: i_score, time_comment: i_comment };
+            did.push(newData);
+        }
+        $.ajax({
+            type: "POST",
+            url: "/postdaily",
+            data: {
+                id: id,
+                date: date,
+                did: JSON.stringify(did)
+            },
+            success: function (response) {
+                if (response['res'] === true) {
+                    alert(response['msg']);
+                }
+            },
+        });
+    }
+
+    function get_timetable() {
+        if (login_checker == null || user_id == null) {
+            return;
+        }
+        let id = user_id;
+        let date = $('#datepicker').val();
+        let did = [];
+
+        $.ajax({
+            type: "POST",
+            url: "/getdaily",
+            data: {
+                id: id,
+                date: date,
+            },
+            success: function (response) {
+                if (response['res'] === true) {
+                    did = response['val']['did'];
+                    for (let i = 0; i < did.length; i++) {
+                        time_name = did[i]['time_name'];
+                        time_comment = did[i]['time_comment'];
+                        time_score = did[i]['time_score'];
+                        for (let z = 1; z <= 3; z++) {
+                            if (!(did[i]['time_did'][z - 1]['do'])) {
+                                break;
+                            }
+                            $(`.time_${time_name} .time_do_${z}`).val(did[i]['time_did'][z - 1]['do']);
+                            $(`.time_${time_name} .time_long_${z}`).val(did[i]['time_did'][z - 1]['long']);
+                            $(`.time_${time_name} .time_desc_${z}`).val(did[i]['time_did'][z - 1]['desc']);
+                        }
+                        $(`.time_${time_name} .time_score`).val(time_score);
+                        $(`.time_${time_name} .time_comment`).val(time_comment);
+                    }
+                }
+            },
+        });
+    }
+
+    function time_table_button_click() {
+        clear_timetable();
+        changeToTimeTable();
+        get_timetable();
+    }
+
+    function daily_report_button_click() {
+        changeToReportTable();
+        loadResultTable();
+        loadResultLineGraph();
+        loadResultPieGraph();
+        loadResultAvrageImmerse();
+    }
+
+    function left_button_click() {
+        $('#datepicker').datepicker('setDate', "c-1d");
+        changeCurrentDate();
+        clear_timetable();
+        clearResultTable();
+        clearAllGraph();
+        if (nowYouSee === "timetable") {
+            changeToTimeTable();
+            get_timetable();
+        } else {
+            changeToReportTable();
+            loadResultTable();
+            loadResultLineGraph();
+            loadResultAvrageImmerse();
+        }
+
+    }
+
+    function right_button_click() {
+        $('#datepicker').datepicker('setDate', "c+1d");
+        changeCurrentDate();
+        clear_timetable();
+        clearResultTable();
+        clearAllGraph();
+        if (nowYouSee === "timetable") {
+            changeToTimeTable();
+            get_timetable();
+        } else {
+            changeToReportTable();
+            loadResultTable();
+            loadResultLineGraph();
+            loadResultAvrageImmerse();
+        }
+    }
+
+    function today_button_click() {
+        toToday();
+        changeCurrentDate();
+        clear_timetable();
+        clearResultTable();
+        clearAllGraph();
+        if (nowYouSee === "timetable") {
+            changeToTimeTable();
+            get_timetable();
+        } else {
+            changeToReportTable();
+            loadResultTable();
+            loadResultLineGraph();
+            loadResultAvrageImmerse();
+        }
+    }
+
+    function calender_date_click() {
+        changeCurrentDate();
+        clear_timetable();
+        clearResultTable();
+        clearAllGraph();
+        if (nowYouSee === "timetable") {
+            changeToTimeTable();
+            get_timetable();
+        } else {
+            changeToReportTable();
+            loadResultTable();
+            loadResultLineGraph();
+            loadResultAvrageImmerse();
+        }
+    }
+
+    function clear_timetable() {
+        //
+        for (let i = 0; i < 24; i++) {
+            for (let z = 1; z <= 3; z++) {
+                $(`.time_${i} .time_do_${z}`).val('');
+                $(`.time_${i} .time_long_${z}`).val('');
+                $(`.time_${i} .time_desc_${z}`).val('');
+            }
+            $(`.time_${i} .time_score`).val('');
+            $(`.time_${i} .time_comment`).val('');
+        }
+    }
+
+    function setCookie(name, value, exp) {
+        let date = new Date();
+        date.setTime(date.getTime() + exp * 60 * 1000);
+        document.cookie = name + '=' + value + ';expires=' + date.toUTCString() + ';path=/';
+    }
+
+    function getCookie(name) {
+        let value = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
+        return value ? value[2] : null;
+    }
+
+    function deleteCookie(name) {
+        document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+    }
+
+
+    function loadResultTable() {
+        clearResultTable();
+        let id = user_id;
+        let date = $('#datepicker').val();
+
+        $.ajax({
+            type: "POST",
+            url: "/piechart",
+            data: {
+                id: id,
+                date: date,
+            },
+            success: function (response) {
+                //  파이차트 값
+                let small_keyList = Object.keys(response['val']);
+                let bigList = response['val']['category_sum'];
+                let big_keyList = Object.keys(bigList);
+                // 소카테고리들 채우기
+                for (let i = 0; i < small_keyList.length; i++) {
+                    for (z = 0; z < 14; z++) {
+                        if (small_keyList[i] === $(`.small-${z}`).text()) {
+                            $(`.smalltime-${z}`).text(response['val'][small_keyList[i]]);
+                            break;
+                        }
+                    }
+                }
+                //    큰 카테고리들
+                for (let i = 0; i < big_keyList.length; i++) {
+                    for (let x = 0; x < 4; x++) {
+                        if (big_keyList[i] === document.querySelector(`.big-${x}`).innerText) {
+                            document.querySelector(`.bigtime-${x}`).innerText = bigList[big_keyList[i]];
+                            break;
+                        }
+                    }
+                }
+                loadResultPieGraph();
+            },
+        });
+    }
+
+    function loadResultLineGraph() {
+        let id = user_id
+        let date = $('#datepicker').val()
+        $.ajax({
+            type: "POST",
+            url: "/graph",
+            data: {
+                id: id,
+                date: date,
+            },
+            success: function (response) {
+                //  파이차트 값
+                let label = Object.keys(response);
+                let vals = []
+                for (let i = 0; i < label.length; i++) {
+                    vals.push(response[label[i]]);
+                }
+                if (document.querySelector('#lineChart')) {
+                    document.querySelector('#lineChart').remove();
+                }
+                let newCanvas = document.createElement('canvas');
+                newCanvas.setAttribute('id', 'lineChart');
+                document.querySelector('.chart-grid-item-4').append(newCanvas);
+                var ctx = document.getElementById("lineChart").getContext("2d");
+                var myChart = new Chart(ctx, {
+                    type: "line",
+                    data: {
+                        // label 여기에 데이터를 정의할 수 있습니다.
+                        labels: label,
+                        datasets: [
+                            {
+                                label: "Immerse by time",
+                                // data 여기의 데이터를 변경할 수 있습니다.
+                                data: vals,
+                                backgroundColor: backgroundColors,
+                                borderColor: borderColors,
+                                borderWidth: 1,
+                            },
+                        ],
+                    },
+                    options: {
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                        },
+                        scales: {
+                            yAxes: [
+                                {
+                                    ticks: {
+                                        beginAtZero: true,
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                });
+            },
+        });
+    }
+
+    function loadResultAvrageImmerse() {
+        let id = user_id;
+        let date = $('#datepicker').val();
+        if (id != null) {
+            $.ajax({
+                type: "POST",
+                url: "/avgimmerse",
+                data: {
+                    id: id,
+                    date: date,
+                },
+                success: function (response) {
+                    if (response['res'] == false) {
+                        alert(response['msg']);
+                        document.querySelector(".score-average").innerText = ``;
+                    }
+                    else {
+                        document.querySelector(".score-average").innerText = `${response['val']}점`;
+                    }
+                },
+            });
+        }
+    }
+
+    function loadResultPieGraph() {
+        let label = ['휴식', '업무', '자기계발', '기타'];
+        let vals = [];
+        for (let i = 0; i < 4; i++) {
+            vals.push(document.querySelector(`.bigtime-${i}`).innerText);
+        }
+        if (document.querySelector('#pieChart')) {
+            document.querySelector('#pieChart').remove();
+        }
+        let newCanvas = document.createElement('canvas');
+        newCanvas.setAttribute('id', 'pieChart');
+        document.querySelector('.chart-grid-item-5').append(newCanvas);
+        var ctx = document.getElementById("pieChart").getContext("2d");
+        var myChart = new Chart(ctx, {
+            type: "pie",
+            data: {
+                // label 여기에 데이터를 정의할 수 있습니다.
+                labels: label,
+                datasets: [
+                    {
+                        label: "# of Votes",
+                        //   data 여기의 데이터를 변경할 수 있습니다.
+                        data: vals,
+                        backgroundColor: backgroundColors,
+                        borderColor: borderColors,
+                        borderWidth: 1,
+                    },
+                ],
+            },
+            options: {
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                },
+                scales: {
+                    yAxes: [
+                        {
+                            ticks: {
+                                beginAtZero: true,
+                            },
+                        },
+                    ],
+                },
+            },
+        });
+    }
+
+    function clearResultTable() {
+        for (let i = 0; i < 14; i++) {
+            $(`.smalltime-${i}`).text(0);
+        }
+        for (let i = 0; i < 4; i++) {
+            $(`.bigtime-${i}`).text(0);
+        }
+    }
+
+    function clearAllGraph() {
+        if (document.querySelector('#pieChart')) {
+            document.querySelector('#pieChart').remove();
+        }
+        if (document.querySelector('#lineChart')) {
+            document.querySelector('#lineChart').remove();
+        }
+
+    }
+</script>
+
+</html>
